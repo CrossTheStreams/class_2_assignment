@@ -72,60 +72,21 @@ print(total)
 print(correct/total)
 
 
-# for each matchup in the NCAA Tournement, compute the number of
-# times the widely used RPI model predicted the winner.
-
-correct <- 0
-total <- length(ncaa.team1)
-for(i in 1:total) {
-  
-  score1 <- teams$RPI[teams$url.name == ncaa.team1[i]]
-  score2 <- teams$RPI[teams$url.name == ncaa.team2[i]]
-  
-  score1 <- as.numeric(as.character(score1))
-  score2 <- as.numeric(as.character(score2))
-  
-  symbol <- "X"
-  
-  if(ncaa.winner[i] == 1 & score1 > score2) {
-    correct <- correct + 1
-    symbol <- "*"
-  }
-  
-  if(ncaa.winner[i] == 2 & score2 > score1) {
-    correct <- correct + 1
-    symbol <- "*"
-  }
-  
-  print(paste(symbol,paste(paste(ncaa.team1[i],"vs."),ncaa.team2[i])))
-  
-}
-
-# correct picks in the NCAA tournement based on RPI
-print("RPI")
-print(correct)
-print(total)
-print(correct/total)
-
-
 ##########
 #########
 
-#teams.no.heights <- teams
-#write.csv(teams.no.heights,"teams_no_heights.csv")
-#teams.no.heights <- read.csv("teams_no_heights.csv")
-#n <- nrow(teams.no.heights)
-#teams <- teams.no.heights
+# Using average playing height for predicting wins
+# Inspired by:
+# http://www.guardian.co.uk/sport/blog/2013/mar/18/ncaa-march-madness-brackets-team-height
+
+# teams <- read.csv("lib/lrmc_teams.csv")
 
 # Character to vector help map strings to numeric values
 heights_arr <- c("5-0","5-1","5-2","5-3","5-4","5-5","5-6","5-7","5-8","5-9","5-10","5-11","6-0","6-1","6-2","6-3","6-4","6-5","6-6","6-7","6-8","6-9","6-10","6-11","7-0","7-1","7-2","7-3","7-4","7-5","7-6","7-7","7-8","7-9","7-10","7-11","8-0")
 
-# Lets see if mean heights will have predictive value? 
+teams["mean.playing.height"] <- NA
 
-teams["mean.height"] <- NA
-teams["max.height"] <- NA
-teams["min.height"] <- NA
-
+# Use total play time 
 
 process.heights <- function () {
 
@@ -134,8 +95,13 @@ process.heights <- function () {
     team.name <- teams$url.name[teams.idx]
     url <- paste("http://www.sports-reference.com/cbb/schools/",team.name,"/2013.html",sep="")
     tables <- readHTMLTable(url)
-    height_strs <- as.character(tables$roster$Ht)
-    heights <- c()
+    roster <- as.character(tables$roster[order(tables$roster$Player),"Player"])
+    height_strs <- as.character(tables$roster[order(tables$roster$Player),"Ht"])
+
+    heights <- c() 
+
+    min.per.game <- as.numeric(as.vector(tables$advanced[order(tables$advanced$Player),"MP"]))
+    total.min.played <- sum(min.per.game)
     
     for(str_i in 1:length(height_strs)) { 
       # inches to centimeters
@@ -143,28 +109,33 @@ process.heights <- function () {
 
       # Got weird error concerning a zero length numeric vector?
       if (length(height_centimeters) == 1) {
-
-        print(paste(as.character(tables$roster$Player[str_i])," : ",as.character(height_centimeters), " centimeters tall."))
+        print(paste(as.character(roster[str_i])," : ",as.character(height_centimeters), " centimeters tall."))
         heights[str_i] <- height_centimeters
       }
     }
 
     # We should only have integers here, but coerce in case. (errors earlier)
+    heights <- heights[which(!is.na(heights))]
+    min.per.game <- min.per.game[which(!is.na(heights))]
+
     heights <- as.numeric(heights)
+
+    time.adjusted.heights <- heights * (min.per.game/total.min.played)
        
-    teams[which(teams$url.name == team.name),"mean.height"] <- mean(heights,na.rm=TRUE)
-    
-    teams[which(teams$url.name == team.name),"max.height"] <- max(heights,na.rm=TRUE)
-
-    teams[which(teams$url.name == team.name),"min.height"] <- min(heights,na.rm=TRUE)
-
+    mean.playing.height <- sum(time.adjusted.heights,na.rm=TRUE) 
+    teams[which(teams$url.name == team.name),"mean.playing.height"] <- mean.playing.height  
+    print(paste(team.name," has time adjusted team height : ",mean.playing.height))
   }
+  return(list("teams.with.heights"=teams))
 }
 
 # Last time I looked at height, I look for it's prediction of a winning season.
 # 
 
-process.heights()
+collection <- process.heights()
+teams.with.heights <- collection$teams.with.heights
+write.csv(teams.with.heights,"lib/lrmc_teams_with_heights.csv")
+
 
 teams <- teams[-which(teams$W == "W"),]
 
