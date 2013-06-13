@@ -1,14 +1,13 @@
 # Let's get the party started!
-teams <- setup.teams()
-n <- nrow(teams)
-t <- matrix(0,n,n)
-ncaa.team1  <- c()
-ncaa.team2  <- c()
-ncaa.winner <- c()
-
 process.lrmc <- function() {
 
+  teams <- setup.teams()
   n <- nrow(teams)
+  t <- matrix(0,n,n)
+  ncaa.team1  <- c()
+  ncaa.team2  <- c()
+  ncaa.winner <- c()
+
 
   # loop through all teams on the teams list
   for(teams.idx in 1:n) {
@@ -147,5 +146,37 @@ process.lrmc <- function() {
       } 
     }
   }
-  return (teams)
+
+  # Phew! How about those for loops everybody!
+
+  # normalize lmrc outputs
+  for(i in 1:n) {
+    if(teams$ngames[i]>0) {
+      t[i,] <- t[i,]/teams$ngames[i]
+    }
+  }
+
+  #initialize ranking procedure
+  p <- matrix(1/n, 1, n)
+
+  for(i in 1:n) {
+    p[i] <- n-i+1
+  }
+
+  p <- p/sum(p)
+
+  # run ranking procedure
+  for(i in 1:1000) {
+    p.next <- p %*% t
+    print(norm(p.next - p))
+    p <- p.next
+  }
+
+  # add LRMC score to table and sort to get ranking
+  teams$LRMC.score <- t(p)
+
+  teams <- teams[order(teams$LRMC.score, decreasing=TRUE),]
+
+  return(list("teams"=teams,"ncaa.team1"=ncaa.team1,"ncaa.team2"=ncaa.team2,"ncaa.winner"=ncaa.winner))
+
 }

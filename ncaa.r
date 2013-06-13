@@ -21,46 +21,21 @@ pnorm(a*x-b)
 # Functions we need to setup our data.
 source("lib/setup_teams.r")
 
-
 # LRMC Algorithm
 source("lib/lrmc.r")
 
 # Run the LRMC
-teams <- process.lrmc()
+collection <- process.lrmc()
 
-# Phew! How about those for loops everybody!
+teams <- collection$teams
+n <- nrow(teams)
+ncaa.team1  <- collection$ncaa.team1
+ncaa.team2  <- collection$ncaa.team2
+ncaa.winner <- collection$ncaa.winner
 
-# normalize
-for(i in 1:n) {
-  if(teams$ngames[i]>0)
-  t[i,] <- t[i,]/teams$ngames[i]
-}
-
-#initialize ranking procedure
-p <- matrix(1/n, 1, n)
-
-for(i in 1:n) {
-  p[i] <- n-i+1
-}
-
-p <- psum(p)
-
-# run ranking procedure
-for(i in 1:1000) {
-  p.next <- p %*% t
-  print(norm(p.next - p))
-  p <- p.next
-}
-
-# add LRMC score to table and sort to get ranking
-teams$LRMC.score <- t(p)
-
-teams <- teams[order(teams$LRMC.score, decreasing=TRUE),]
-
-# Now, Let's save this...
-
-write.csv(teams,"lib/lrmc_teams.csv")
-teams <- read.csv("lrmc_teams.csv")
+#To save, just in case...
+#write.csv(teams,"lib/lrmc_teams.csv")
+#teams <- read.csv("lib/lrmc_teams.csv")
 
 teams.alpha <- teams[order(teams$School, decreasing=FALSE),]
 
@@ -95,8 +70,6 @@ print("LRMC")
 print(correct)
 print(total)
 print(correct/total)
-
-
 
 
 # for each matchup in the NCAA Tournement, compute the number of
