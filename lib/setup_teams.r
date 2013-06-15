@@ -40,6 +40,7 @@ setup.teams <- function() {
     }
   }
   teams$ngames <- array(0, n)
+  teams$win.percent <- teams$W/(teams$W + teams$L)
   return(teams)
 }
 

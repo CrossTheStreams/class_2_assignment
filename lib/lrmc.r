@@ -1,5 +1,5 @@
 # Let's get the party started!
-process.lrmc <- function() {
+process.lrmc <- function(year) {
 
   teams <- setup.teams()
   n <- nrow(teams)
@@ -15,9 +15,9 @@ process.lrmc <- function() {
     # read in team game results
     team1.name <- teams$url.name[teams.idx]
     url <- paste("http://www.sports-reference.com/cbb/schools/",team1.name, sep="")
-    url <- paste(url, "/2013-schedule.html", sep="")
+    url <- paste(url, paste("/",year,"-schedule.html",sep=""), sep="")
     tables <- readHTMLTable(url)
-    
+     
     outcomes <- tables[[length(tables)]]
     if(ncol(outcomes) != 13) {
       print("error")
@@ -31,7 +31,6 @@ process.lrmc <- function() {
     if (length(bad.rows) > 0) {
       outcomes <- outcomes[-bad.rows,] 
     }
-
  
     # note that the paper is inconsistent with the indexing convention
     # if game is held at home court i
