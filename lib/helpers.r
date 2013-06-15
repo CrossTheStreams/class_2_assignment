@@ -41,4 +41,28 @@ transformName2 <- function(name) {
   }
 }
 
+tournament.champs <- function(ncaa.winner,ncaa.team1,ncaa.team2) {
+  winner.names <- c()
+
+  for (i in 1:length(ncaa.winner)) {
+    winner <- ncaa.winner[i]
+    if (winner == 1) {
+      winner.names <- c(winner.names, ncaa.team1[i]) 
+    }
+    else {
+      winner.names <- c(winner.names, ncaa.team2[i]) 
+    }
+  } 
+
+
+  unique.winners <- unique(winner.names)
+  ncaa.champ.teams <- data.frame("team"=unique.winners,"tournament.wins"=vector(length=length(unique.winners)))
+
+  for (i in 1:length(unique.winners)) {
+    ncaa.champ.teams[which(ncaa.champ.teams$team == unique.winners[i]),"tournament.wins"] <- length(which(winner.names == unique.winners[i]))
+  }
+
+  ncaa.champ.teams <- ncaa.champ.teams[order(ncaa.champ.teams$tournament.wins,decreasing=T),]
+  return(list("ncaa.champ.teams"=ncaa.champ.teams))
+}
 

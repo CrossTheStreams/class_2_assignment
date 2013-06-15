@@ -2,8 +2,10 @@
 source("lib/helpers.r")
 
 pkgTest("XML")
+pkg("outliers")
 # include XML package to read data from HTML tables
 library(XML)
+library(outliers)
 
 # set some constants
 tau <- 4.26
@@ -133,28 +135,113 @@ process.heights <- function () {
 # 
 
 collection <- process.heights()
-teams.with.heights <- collection$teams.with.heights
+teams <- collection$teams.with.heights
 write.csv(teams.with.heights,"lib/lrmc_teams_with_heights.csv")
 
+# for each matchup in the NCAA Tournement, compute the number of
+# times the widely used RPI model predicted the winner.
 
-teams <- teams[-which(teams$W == "W"),]
+correct <- 0
+total <- length(ncaa.team1)
+for(i in 1:total) {
+  
+  score1 <- teams$mean.playing.height[teams$url.name == ncaa.team1[i]]
+  score2 <- teams$mean.playing.height[teams$url.name == ncaa.team2[i]]
+  
+  score1 <- as.numeric(as.character(score1))
+  score2 <- as.numeric(as.character(score2))
+  
+  symbol <- "X"
+  
+  if(ncaa.winner[i] == 1 & score1 > score2) {
+    correct <- correct + 1
+    symbol <- "*"
+
+  }
+  
+  if(ncaa.winner[i] == 2 & score2 > score1) {
+    correct <- correct + 1
+    symbol <- "*"
+  }
+  
+  print(paste(symbol,paste(paste(ncaa.team1[i],"vs."),ncaa.team2[i])))
+  
+}
+
+
+# correct picks in the NCAA tournement based on Height
+print("Height")
+print(correct)
+print(total)
+print(correct/total)
+
+# There are impurities in the data that are making outliers.
+alpha <- teams
+teams <- teams[-which(teams$mean.playing.height == outlier(teams$mean.playing.height)),]
+teams <- teams[-which(teams$win.percent == outlier(teams$win.percent)),]
+
+teams$win.percent <- teams$W/(teams$W + teams$L)
 
 # Is there any value in above mean height for a team?
 
 # Get our combined mean height among all teams.
-combined.mean.height <- mean(teams$mean.height)
-
-# In feet
-combined.mean.height/2.54/12
+all.mean.height <- mean(teams$mean.playing.height)
+# Normalized variance of mean playing heights
+teams$norm.height.diffs <- ((teams$mean.playing.height/all.mean.height) - 1)
 
 # Get logical values
 teams["above.mean.height"] <- (teams$mean.height > combined.mean.height)
 teams["winning.season"] <- (as.numeric(teams$W) > as.numeric(teams$L))
 
-# More Plots
-plot(teams$mean.height,teams$W)
 
-true_positives <- length(teams[which(teams$above.mean.height == T & teams$winning.season == T),1])
+# Linear Regressions of height data and LRMC
+# Let's compare height with the LRMC as a predictor of winning percentage
+height.fit <- lm(formula = teams.win.percent ~ teams.mean.playing.height, data = data.frame(teams$mean.playing.height, teams$win.percent)) 
+
+lrmc.fit <- lm(formula = teams.win.percent ~ teams.LRMC.score, data = data.frame(teams$LRMC.score, teams$win.percent)) 
+
+par(col="black",cex=1,lw=1)
+plot(teams$mean.playing.height,teams$win.percent)
+plot(teams$LRMC.score,teams$win.percent)
+par(col="blue",cex=2,lwd=1.5)
+abline(height.fit)
+abline(lrmc.fit)
+
+ncaa.champ.teams <- tournament.champs(ncaa.winner,ncaa.team1,ncaa.team2)$ncaa.champ.teams
+
+# Top 25 in tournament
+for(i in 1:25) {      
+  height <- teams[which(teams$url.name==ncaa.champ.teams$teams[i]),"mean.playing.height"]
+  percent <- teams[which(teams$url.name==ncaa.champ.teams$teams[i]),"win.percent"] 
+  points(x=height,y=percent,bg="red",cex=2,col="green")
+}
+
+# Top 25 in tournament
+for(i in 1:25) {      
+  lrmc <- teams[which(teams$url.name==ncaa.champ.teams$teams[i]),"LRMC.score"]
+  percent <- teams[which(teams$url.name==ncaa.champ.teams$teams[i]),"win.percent"] 
+  points(x=lrmc,y=percent,bg="red",cex=1.5,col="green")
+}
+
+# Top 25 in tournament
+for(i in 1:25) {      
+  lrmc <- teams[which(teams$url.name==ncaa.champ.teams$teams[i]),"LRMC.score"]
+  percent <- teams[which(teams$url.name==ncaa.champ.teams$teams[i]),"win.percent"] 
+  points(x=lrmc,y=percent,bg="red",cex=1.5,col="green")
+}
+ 
+champ.team.rows <- teams[which(teams$url.name %in% ncaa.champ.teams$teams),]
+ncaa.champ.teams$win.percent <- c()
+
+for (i in which(!is.na(champ.team.rows$url.name))) {
+  ncaa.champ.teams[which(ncaa.champ.teams$teams == champ.team.rows[i,"url.name"]),"win.percent"] <- teams[i,"win.percent"]
+}
+
+hist(ncaa.champ.teams$win.percent[1:25])
+
+plot(sapply(X=ncaa.champ.teams$tournament.wins,FUN=function(x){x - rnorm(1)/10}),ncaa.champ.teams$win.percent)
+
+true_positives <- length(teams[which(teams$above.mean.height == T & ason == T),1])
 true_negatives <- length(teams[which(teams$above.mean.height == F & teams$winning.season == F),1])
 false_positives <- length(teams[which(teams$above.mean.height == T & teams$winning.season == F),1])
 false_negatives <- length(teams[which(teams$above.mean.height == F & teams$winning.season == T),1])
@@ -186,7 +273,7 @@ print(Xsq$expected)
 # As an aside, while looking at plots, I found these interesting:
 
   # Average heights of teams follow a fairly normal distribution (due to the Central Limit Theorem?):
-  qqnorm(teams$mean.height)
+  qqnorm(teams$mean.playing.height)
   qqnorm(rnorm(1000))
 
   # There seems to be correlation between mean height and rank.
