@@ -67,7 +67,7 @@ teams <- process.heights(teams,"2013")$teams.with.heights
 write.csv(teams,"lib/lrmc_teams_with_heights.csv")
 teams <- read.csv("lib/lrmc_teams_with_heights.csv")
 
-# Off the cuff, height alone is no better than a oin flip.
+# Off the cuff, height alone is no better than a coin flip.
 height.picks <- apply.model(teams,"time.adjusted.height",ncaa.team1,ncaa.team2,ncaa.winner)
 
 
@@ -94,9 +94,11 @@ par(col="blue",cex=2,lwd=1.5)
 abline(height.fit)
 highlight.points(as.character(ncaa.champ.teams$teams),"time.adjusted.height","win.percent")
 
-# We see a very modest correlation with height here.
-
+# We see a very modest correlation with height here with win percentage.
 summary(height.fit)
+# However, win percentage is a bad predictor of the tournament!
+win.percent.2013.picks <- apply.model(teams,"win.percent",ncaa.team1,ncaa.team2,ncaa.winner)
+
 
 # Let's attempt at weighting this in with the LRMC and see what happens.
 
